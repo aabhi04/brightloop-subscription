@@ -4,6 +4,7 @@
 {% block content %}
 {% call ui.page_header("Invoices", "Generated invoices start as DRAFT with lines, taxes and discounts pre-filled") %}
   {{ ui.action("/invoices/generate-due", "Generate due invoices", "Create invoices for every ACTIVE subscription that is due today? Safe to run more than once.", "primary") }}
+ <a href="/invoices/export.csv{{ '?' ~ request.url.query if request.url.query }}" class="px-3 py-1.5 rounded-md border bg-white text-sm">Export CSV</a>
 {% endcall %}
 
 {% call ui.filter_bar() %}
