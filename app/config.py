@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/brightloop"
     test_database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/brightloop_test"
 
-    jwt_secret: str = "dev-secret-change-me"
+    jwt_secret: str = "dev-only-secret-change-me-in-production-0001"
     jwt_expires_minutes: int = 720
     reset_token_expires_minutes: int = 60
 
