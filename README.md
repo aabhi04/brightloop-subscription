@@ -1,4 +1,4 @@
-# Brightloop Subscription Management (Level 1)
+# Brightloop Subscription Management 
 
 A full-stack subscription management system: products with variants, recurring plans, quotation
 templates, a subscription lifecycle, automatic invoicing with taxes and discounts, partial payments,
@@ -162,7 +162,3 @@ tests/               pytest suite
 docs/                api-spec.md, demo-script.md
 ```
 
-## Out of scope for Level 1
-
-PDF generation, payment gateways, refunds, multi-currency, rich email templates, dark mode, i18n.
-The Tailwind Play CDN is fine for Level 1 but should be swapped for a compiled stylesheet in production.
