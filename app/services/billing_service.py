@@ -8,7 +8,7 @@ from app.models import Invoice, InvoiceLine, Plan, Subscription
 from app.services.discount_service import DraftLine, apply_discounts
 from app.services.tax_service import line_tax
 from app.utils.constants import InvoiceStatus, PlanStatus, SubscriptionStatus
-from app.utils.dates import add_period, period_end, today
+from app.utils.dates import next_period_start, today
 from app.utils.money import ZERO, money
 from app.utils.numbering import next_number
 
@@ -70,7 +70,7 @@ def build_invoice(db: Session, sub: Subscription, period_start: date, on_date: d
         subscription_id=sub.id,
         customer_id=sub.customer_id,
         billing_period_start=period_start,
-        billing_period_end=period_end(period_start, plan.billing_period),
+        billing_period_end=next_period_start(sub.start_date, period_start, plan.billing_period) - timedelta(days=1),
         subtotal=money(subtotal),
         discount_total=money(discount_total),
         tax_total=money(tax_total),
@@ -100,7 +100,7 @@ def _bill_subscription(db: Session, subscription_id: int, on_date: date) -> list
         )
         if not already:
             created.append(build_invoice(db, sub, period_start, on_date).number)
-        sub.next_billing_date = add_period(period_start, sub.plan.billing_period)
+        sub.next_billing_date = next_period_start(sub.start_date, period_start, sub.plan.billing_period)
         periods += 1
     db.commit()
     return created

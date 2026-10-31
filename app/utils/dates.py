@@ -28,6 +28,14 @@ def add_period(d: date, period: BillingPeriod, count: int = 1) -> date:
     raise ValueError(f"Unknown billing period: {period}")
 
 
-def period_end(start: date, period: BillingPeriod) -> date:
-    """Last day covered by a billing period that starts on `start`."""
-    return add_period(start, period) - timedelta(days=1)
+def next_period_start(anchor: date, current: date, period: BillingPeriod) -> date:
+    """Start of the period after `current`, keeping the anchor's day of month.
+
+    Stepping month by month from the previous date drifts (Aug 31 -> Sep 30 -> Oct 30);
+    counting months from the anchor gives Aug 31 -> Sep 30 -> Oct 31.
+    """
+    if period in (BillingPeriod.MONTHLY, BillingPeriod.YEARLY):
+        step = 1 if period == BillingPeriod.MONTHLY else 12
+        months = (current.year - anchor.year) * 12 + (current.month - anchor.month)
+        return add_months(anchor, months + step)
+    return add_period(current, period)
