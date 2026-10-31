@@ -113,3 +113,20 @@ def overdue_invoices_query(
 
 def days_overdue(invoice: Invoice) -> int:
     return (today() - invoice.due_date).days
+
+
+def upcoming_billing(db: Session, days: int = 7, limit: int = 10) -> list[Subscription]:
+    """ACTIVE subscriptions that will be invoiced within the next days days, soonest first."""
+    start = today()
+    stmt = (
+        select(Subscription)
+        .options(joinedload(Subscription.customer), joinedload(Subscription.plan))
+        .where(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.next_billing_date.between(start, start + timedelta(days=days)),
+        )
+        .order_by(Subscription.next_billing_date, Subscription.id)
+        .limit(limit)
+    )
+    return list(db.scalars(stmt))
+
