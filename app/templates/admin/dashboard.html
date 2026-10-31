@@ -28,4 +28,15 @@
     </ul>
   {% endcall %}
 </div>
+<h2 class="text-lg font-semibold mt-8 mb-3">Billing in the next 7 days</h2>
+{% call ui.data_table(["Subscription", "Customer", "Plan", "Next billing"], empty=not upcoming, empty_text="Nothing is due in the next 7 days") %}
+  {% for s in upcoming %}
+  <tr>
+    <td class="px-4 py-3 font-medium"><a class="underline" href="/subscriptions/{{ s.id }}">{{ s.number }}</a></td>
+    <td class="px-4 py-3">{{ s.customer.name }}</td>
+    <td class="px-4 py-3">{{ s.plan.name }}</td>
+    <td class="px-4 py-3">{{ s.next_billing_date|date }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
 {% endblock %}
