@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Payments{% endblock %}
+{% block content %}
+{{ ui.page_header("Payments", "Record payments from an invoice's detail page") }}
+
+{% call ui.filter_bar() %}
+  {{ ui.select("method", "Method", payment_methods, filters.get("method"), blank="All methods") }}
+  {{ ui.field("date_from", "From", filters.get("date_from", ""), type="date") }}
+  {{ ui.field("date_to", "To", filters.get("date_to", ""), type="date") }}
+{% endcall %}
+
+{% call ui.data_table(["Date", "Invoice", "Method", "Amount", "Note"], empty=not page["items"]) %}
+  {% for p in page["items"] %}
+  <tr>
+    <td class="px-4 py-3">{{ p.payment_date|date }}</td>
+    <td class="px-4 py-3"><a class="underline" href="/invoices/{{ p.invoice_id }}">{{ p.invoice.number }}</a></td>
+    <td class="px-4 py-3">{{ p.method.value.replace("_", " ").title() }}</td>
+    <td class="px-4 py-3">{{ p.amount|money }}</td>
+    <td class="px-4 py-3 text-slate-500">{{ p.note or "" }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

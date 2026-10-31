@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Discounts{% endblock %}
+{% block content %}
+{{ ui.page_header("Discounts", "Applied automatically on the next invoice while valid, eligible and under the usage limit") }}
+
+{% set selected = editing.products|map(attribute="id")|list if editing else [] %}
+{% call ui.card("Edit discount" if editing else "New discount") %}
+  <form method="post" action="/admin/discounts{{ '/' ~ editing.id if editing }}" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {{ ui.field("name", "Name", editing.name if editing else "", required=True) }}
+    {{ ui.select("type", "Type", discount_types, editing.type.value if editing else "PERCENT") }}
+    {{ ui.field("value", "Value", editing.value if editing else "", type="number", step="0.01", min=0, required=True) }}
+    {{ ui.select("applies_to", "Applies to", discount_scopes, editing.applies_to.value if editing else "SUBSCRIPTION") }}
+    {{ ui.field("min_purchase", "Minimum purchase", editing.min_purchase if editing else "0", type="number", step="0.01", min=0) }}
+    {{ ui.field("min_quantity", "Minimum quantity", editing.min_quantity if editing else 0, type="number", min=0) }}
+    {{ ui.field("start_date", "Start date", editing.start_date if editing else "", type="date", required=True) }}
+    {{ ui.field("end_date", "End date", editing.end_date if editing else "", type="date", required=True) }}
+    {{ ui.field("usage_limit", "Usage limit", editing.usage_limit if editing else 100, type="number", min=1, required=True) }}
+    <label class="block text-sm sm:col-span-2 lg:col-span-3">
+      <span class="text-slate-600">Products (for product-level discounts)</span>
+      <select name="product_ids" multiple size="4" class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 bg-white">
+        {% for p in products %}<option value="{{ p.id }}" {% if p.id in selected %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+      <span class="text-xs text-slate-400">Ctrl/Cmd-click to select several</span>
+    </label>
+    <div class="flex gap-2 items-end">{{ ui.submit("Update" if editing else "Create") }}
+      {% if editing %}<a href="/admin/discounts" class="px-4 py-2 rounded-md border text-sm">Cancel</a>{% endif %}</div>
+  </form>
+{% endcall %}
+
+{% call ui.data_table(["Discount", "Value", "Applies to", "Conditions", "Valid", "Used", ""], empty=not page["items"]) %}
+  {% for d in page["items"] %}
+  <tr class="align-top">
+    <td class="px-4 py-3 font-medium">{{ d.name }}</td>
+    <td class="px-4 py-3">{{ d.value|money ~ "%" if d.type.value == "PERCENT" else d.value|money }}</td>
+    <td class="px-4 py-3">{{ d.applies_to.value.title() }}
+      {% if d.products %}<p class="text-xs text-slate-500">{{ d.products|map(attribute="name")|join(", ") }}</p>{% endif %}</td>
+    <td class="px-4 py-3 text-xs">min purchase {{ d.min_purchase|money }}<br>min qty {{ d.min_quantity }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ d.start_date|date }} → {{ d.end_date|date }}</td>
+    <td class="px-4 py-3">{{ d.used_count }} / {{ d.usage_limit }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">
+      <a href="/admin/discounts?edit={{ d.id }}" class="px-3 py-1.5 rounded-md border text-sm">Edit</a>
+      {{ ui.action("/admin/discounts/" ~ d.id ~ "/delete", "Delete", "Delete discount " ~ d.name ~ "?", "danger") }}
+    </td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

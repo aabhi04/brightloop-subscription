@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Log in{% endblock %}
+{% block auth_content %}
+<h2 class="text-lg font-semibold mb-4">Log in</h2>
+<form method="post" action="/login" class="space-y-4">
+  <input type="hidden" name="next" value="{{ next or '' }}">
+  {{ ui.field("email", "Email", email, type="email", required=True) }}
+  {{ ui.field("password", "Password", type="password", required=True) }}
+  <button type="submit" class="w-full px-4 py-2 rounded-md bg-slate-900 text-white">Log in</button>
+</form>
+<div class="mt-4 flex justify-between text-sm">
+  <a href="/forgot-password" class="text-slate-600 underline">Forgot password?</a>
+  <a href="/signup" class="text-slate-600 underline">Create an account</a>
+</div>
+{% endblock %}

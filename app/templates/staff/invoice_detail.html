@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}{{ invoice.number }}{% endblock %}
+{% block content %}
+{% set s = invoice.status.value %}
+<div class="no-print">
+{% call ui.page_header("Invoice " ~ invoice.number) %}
+  {% if staff_view %}
+    {% if s == "DRAFT" %}{{ ui.action("/invoices/" ~ invoice.id ~ "/confirm", "Confirm", "Confirm " ~ invoice.number ~ "? The customer will be able to see it.", "primary") }}{% endif %}
+    {% if s in ("CONFIRMED", "PAID") %}{{ ui.action("/invoices/" ~ invoice.id ~ "/send", "Send to customer", "Email " ~ invoice.number ~ " to " ~ invoice.customer.email ~ "?") }}{% endif %}
+    {% if s in ("DRAFT", "CONFIRMED") and invoice.amount_paid == 0 %}{{ ui.action("/invoices/" ~ invoice.id ~ "/cancel", "Cancel", "Cancel " ~ invoice.number ~ "? This cannot be undone.", "danger") }}{% endif %}
+  {% endif %}
+  <button type="button" onclick="window.print()" class="px-3 py-1.5 rounded-md border bg-white text-sm">Print</button>
+{% endcall %}
+</div>
+
+<!-- Print-friendly invoice -->
+<article class="bg-white rounded-lg shadow-sm border p-6 md:p-8 mb-6">
+  <header class="flex flex-wrap justify-between gap-4 mb-8">
+    <div>
+      <p class="text-2xl font-semibold">Brightloop</p>
+      <p class="text-sm text-slate-500">Subscription invoice</p>
+    </div>
+    <div class="text-sm text-right">
+      <p class="text-lg font-semibold">{{ invoice.number }}</p>
+      <p>{{ ui.status_badge(invoice.status, overdue) }}</p>
+      {% if invoice.sent_at %}<p class="text-slate-400 mt-1">Sent {{ invoice.sent_at.date()|date }}</p>{% endif %}
+    </div>
+  </header>
+  <div class="grid sm:grid-cols-3 gap-4 text-sm mb-8">
+    <div><p class="text-slate-500">Billed to</p><p class="font-medium">{{ invoice.customer.name }}</p><p>{{ invoice.customer.email }}</p></div>
+    <div><p class="text-slate-500">Billing period</p><p>{{ invoice.billing_period_start|date }} → {{ invoice.billing_period_end|date }}</p>
+         <p class="text-slate-500 mt-2">Subscription</p><p>{{ invoice.subscription.number }}</p></div>
+    <div><p class="text-slate-500">Due date</p><p class="{{ 'text-red-700 font-medium' if overdue }}">{{ invoice.due_date|date }}</p></div>
+  </div>
+  <div class="overflow-x-auto">
+  <table class="min-w-full text-sm mb-6">
+    <thead class="border-b text-left text-slate-500">
+      <tr><th class="py-2 pr-4">Description</th><th class="py-2 pr-4 text-right">Qty</th><th class="py-2 pr-4 text-right">Unit price</th>
+          <th class="py-2 pr-4 text-right">Discount</th><th class="py-2 pr-4 text-right">Tax</th><th class="py-2 text-right">Amount</th></tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for l in invoice.lines %}
+      <tr>
+        <td class="py-2 pr-4">{{ l.description }}</td>
+        <td class="py-2 pr-4 text-right">{{ l.quantity }}</td>
+        <td class="py-2 pr-4 text-right">{{ l.unit_price|money }}</td>
+        <td class="py-2 pr-4 text-right">{{ "-" ~ l.discount_amount|money if l.discount_amount > 0 else "-" }}</td>
+        <td class="py-2 pr-4 text-right">{{ l.tax_amount|money }}</td>
+        <td class="py-2 text-right">{{ l.amount|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <dl class="ml-auto max-w-xs text-sm grid grid-cols-2 gap-y-1">
+    <dt class="text-slate-500">Subtotal</dt><dd class="text-right">{{ invoice.subtotal|money }}</dd>
+    <dt class="text-slate-500">Discount</dt><dd class="text-right">-{{ invoice.discount_total|money }}</dd>
+    <dt class="text-slate-500">Tax</dt><dd class="text-right">{{ invoice.tax_total|money }}</dd>
+    <dt class="font-semibold border-t pt-1">Total</dt><dd class="text-right font-semibold border-t pt-1">{{ invoice.total|money }}</dd>
+    <dt class="text-slate-500">Paid</dt><dd class="text-right">{{ invoice.amount_paid|money }}</dd>
+    <dt class="font-semibold">Balance due</dt><dd class="text-right font-semibold">{{ invoice.balance|money }}</dd>
+  </dl>
+</article>
+
+<div class="grid gap-6 lg:grid-cols-2">
+  <section>
+    <h2 class="text-lg font-semibold mb-3">Payments</h2>
+    {% call ui.data_table(["Date", "Method", "Amount", "Note"], empty=not invoice.payments, empty_text="No payments yet") %}
+      {% for p in invoice.payments %}
+      <tr>
+        <td class="px-4 py-3">{{ p.payment_date|date }}</td>
+        <td class="px-4 py-3">{{ p.method.value.replace("_", " ").title() }}</td>
+        <td class="px-4 py-3">{{ p.amount|money }}</td>
+        <td class="px-4 py-3 text-slate-500">{{ p.note or "" }}</td>
+      </tr>
+      {% endfor %}
+    {% endcall %}
+  </section>
+  {% if staff_view and s == "CONFIRMED" %}
+  <section class="no-print">
+    {% call ui.card("Record a payment") %}
+      <form method="post" action="/payments" class="grid gap-4 sm:grid-cols-2">
+        <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+        {{ ui.select("method", "Method", payment_methods, "CASH") }}
+        {{ ui.field("amount", "Amount (balance " ~ invoice.balance|money ~ ")", invoice.balance, type="number", step="0.01", min="0.01", required=True) }}
+        {{ ui.field("payment_date", "Payment date", today, type="date") }}
+        {{ ui.field("note", "Note") }}
+        <div>{{ ui.submit("Record payment") }}</div>
+      </form>
+      <p class="text-xs text-slate-400 mt-3">Partial payments are allowed. The invoice becomes PAID once payments cover the total.</p>
+    {% endcall %}
+  </section>
+  {% elif staff_view and s == "DRAFT" %}
+    <p class="no-print text-sm text-slate-500">Confirm the invoice before recording payments.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Subscriptions{% endblock %}
+{% block content %}
+{% call ui.page_header("Subscriptions", "DRAFT → QUOTATION → CONFIRMED → ACTIVE → CLOSED") %}
+  <a href="/subscriptions/new" class="px-4 py-2 rounded-md bg-slate-900 text-white text-sm">New subscription</a>
+{% endcall %}
+
+{% if templates_ %}
+{% call ui.card("Create a quotation from a template") %}
+  <form method="post" action="/subscriptions/from-template" class="grid gap-4 sm:grid-cols-4 items-end">
+    <label class="block text-sm">
+      <span class="text-slate-600">Template</span>
+      <select name="template_id" required class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 bg-white">
+        {% for t in templates_ %}<option value="{{ t.id }}">{{ t.name }} ({{ t.validity_days }} days)</option>{% endfor %}
+      </select>
+    </label>
+    {{ ui.select("customer_id", "Customer", customers, required=True) }}
+    {{ ui.field("start_date", "Start date (optional)", type="date") }}
+    <div>{{ ui.submit("Create quotation") }}</div>
+  </form>
+{% endcall %}
+{% endif %}
+
+{% call ui.filter_bar() %}
+  {{ ui.select("status", "Status", subscription_statuses, filters.get("status"), blank="All statuses") }}
+  {{ ui.select("customer_id", "Customer", customers, filters.get("customer_id"), blank="All customers") }}
+  {{ ui.field("q", "Number", filters.get("q", ""), placeholder="SUB-0001") }}
+{% endcall %}
+
+{% call ui.data_table(["Number", "Customer", "Plan", "Start", "Next billing", "Status"], empty=not page["items"]) %}
+  {% for s in page["items"] %}
+  <tr class="hover:bg-slate-50">
+    <td class="px-4 py-3 font-medium"><a class="underline" href="/subscriptions/{{ s.id }}">{{ s.number }}</a></td>
+    <td class="px-4 py-3">{{ s.customer.name }}</td>
+    <td class="px-4 py-3">{{ s.plan.name }}</td>
+    <td class="px-4 py-3">{{ s.start_date|date }}</td>
+    <td class="px-4 py-3">{{ s.next_billing_date|date }}</td>
+    <td class="px-4 py-3">{{ ui.status_badge(s.status) }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

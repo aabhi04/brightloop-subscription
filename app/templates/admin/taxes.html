@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Taxes{% endblock %}
+{% block content %}
+{{ ui.page_header("Taxes", "PERCENT is applied to the line's net amount; FIXED is charged per unit") }}
+
+{% call ui.card("Edit tax" if editing else "New tax") %}
+  <form method="post" action="/admin/taxes{{ '/' ~ editing.id if editing }}" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
+    {{ ui.field("name", "Name", editing.name if editing else "", required=True) }}
+    {{ ui.select("type", "Type", tax_types, editing.type.value if editing else "PERCENT") }}
+    {{ ui.field("rate", "Rate", editing.rate if editing else "", type="number", step="0.01", min=0, required=True) }}
+    <div class="pb-2">{{ ui.checkbox("is_active", "Active", editing.is_active if editing else True) }}</div>
+    <div class="flex gap-2">{{ ui.submit("Update" if editing else "Create") }}
+      {% if editing %}<a href="/admin/taxes" class="px-4 py-2 rounded-md border text-sm">Cancel</a>{% endif %}</div>
+  </form>
+{% endcall %}
+
+{% call ui.data_table(["Tax", "Type", "Rate", "Status", ""], empty=not page["items"]) %}
+  {% for t in page["items"] %}
+  <tr>
+    <td class="px-4 py-3 font-medium">{{ t.name }}</td>
+    <td class="px-4 py-3">{{ t.type.value.title() }}</td>
+    <td class="px-4 py-3">{{ t.rate|money }}{{ "%" if t.type.value == "PERCENT" else " per unit" }}</td>
+    <td class="px-4 py-3">{{ ui.status_badge("ACTIVE" if t.is_active else "CLOSED") }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">
+      <a href="/admin/taxes?edit={{ t.id }}" class="px-3 py-1.5 rounded-md border text-sm">Edit</a>
+      {{ ui.action("/admin/taxes/" ~ t.id ~ "/delete", "Delete", "Delete tax " ~ t.name ~ "?", "danger") }}
+    </td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

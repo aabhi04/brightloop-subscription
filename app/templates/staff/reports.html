@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+{{ ui.page_header("Reports", "Date range filters payments (revenue) and invoice billing periods (outstanding, overdue)") }}
+
+{% call ui.filter_bar() %}
+  {{ ui.field("date_from", "From", filters.get("date_from", ""), type="date") }}
+  {{ ui.field("date_to", "To", filters.get("date_to", ""), type="date") }}
+  {{ ui.select("customer_id", "Customer", customers, filters.get("customer_id"), blank="All customers") }}
+{% endcall %}
+
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+  {{ ui.stat_card("Active subscriptions", stats.active_subscriptions) }}
+  {{ ui.stat_card("Revenue received", stats.revenue_received|money) }}
+  {{ ui.stat_card("Outstanding", stats.outstanding_amount|money, stats.open_invoices ~ " open invoices") }}
+  {{ ui.stat_card("Overdue", stats.overdue_amount|money, stats.overdue_invoices ~ " overdue invoices") }}
+</div>
+
+<h2 class="text-lg font-semibold mb-3">Overdue invoices</h2>
+{% call ui.data_table(["Invoice", "Customer", "Due date", "Days overdue", "Total", "Paid", "Balance"], empty=not overdue["items"], empty_text="No overdue invoices") %}
+  {% for i in overdue["items"] %}
+  <tr>
+    <td class="px-4 py-3 font-medium"><a class="underline" href="/invoices/{{ i.id }}">{{ i.number }}</a></td>
+    <td class="px-4 py-3">{{ i.customer.name }}</td>
+    <td class="px-4 py-3">{{ i.due_date|date }}</td>
+    <td class="px-4 py-3 text-red-700 font-medium">{{ days_overdue(i) }}</td>
+    <td class="px-4 py-3">{{ i.total|money }}</td>
+    <td class="px-4 py-3">{{ i.amount_paid|money }}</td>
+    <td class="px-4 py-3 font-medium">{{ i.balance|money }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(overdue) }}
+
+<h2 class="text-lg font-semibold mt-8 mb-3">Revenue by month</h2>
+{% call ui.data_table(["Month", "Payments", "Amount received"], empty=not revenue, empty_text="No payments in this range") %}
+  {% for row in revenue %}
+  <tr>
+    <td class="px-4 py-3">{{ row.month }}</td>
+    <td class="px-4 py-3">{{ row.payments }}</td>
+    <td class="px-4 py-3">{{ row.amount|money }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{% endblock %}

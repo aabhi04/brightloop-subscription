@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{{ ui.page_header("Dashboard", "Overview of subscriptions and billing") }}
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+  {{ ui.stat_card("Active subscriptions", stats.active_subscriptions, href="/subscriptions?status=ACTIVE") }}
+  {{ ui.stat_card("Revenue received", stats.revenue_received|money, "All payments recorded", href="/payments") }}
+  {{ ui.stat_card("Outstanding", stats.outstanding_amount|money, stats.open_invoices ~ " open invoices", href="/invoices?status=CONFIRMED") }}
+  {{ ui.stat_card("Overdue", stats.overdue_amount|money, stats.overdue_invoices ~ " overdue invoices", href="/reports") }}
+</div>
+<div class="grid gap-6 lg:grid-cols-2">
+  {% call ui.card("Subscriptions by status") %}
+    <ul class="divide-y text-sm">
+      {% for status, count in sub_counts %}
+        <li class="flex justify-between py-2">
+          <a href="/subscriptions?status={{ status }}">{{ ui.status_badge(status) }}</a><span class="font-medium">{{ count }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endcall %}
+  {% call ui.card("Catalog and people") %}
+    <ul class="divide-y text-sm">
+      <li class="flex justify-between py-2"><a class="underline" href="/admin/products">Products</a><span>{{ counts.products }}</span></li>
+      <li class="flex justify-between py-2"><a class="underline" href="/admin/plans">Plans</a><span>{{ counts.plans }}</span></li>
+      <li class="flex justify-between py-2"><a class="underline" href="/customers">Customers</a><span>{{ counts.customers }}</span></li>
+      <li class="flex justify-between py-2"><a class="underline" href="/admin/staff">Staff</a><span>{{ counts.staff }}</span></li>
+    </ul>
+  {% endcall %}
+</div>
+{% endblock %}

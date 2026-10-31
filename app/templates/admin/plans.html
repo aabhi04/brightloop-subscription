@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Plans{% endblock %}
+{% block content %}
+{{ ui.page_header("Plans", "Close, pause and renew are only allowed when the plan's flags permit") }}
+
+{% call ui.card("Edit plan" if editing else "New plan") %}
+  <form method="post" action="/admin/plans{{ '/' ~ editing.id if editing }}" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {{ ui.field("name", "Name", editing.name if editing else "", required=True) }}
+    {{ ui.field("price", "Base price per period", editing.price if editing else "0", type="number", step="0.01", min=0) }}
+    {{ ui.select("billing_period", "Billing period", billing_periods, editing.billing_period.value if editing else "MONTHLY") }}
+    {{ ui.field("min_quantity", "Minimum quantity", editing.min_quantity if editing else 1, type="number", min=1) }}
+    {{ ui.field("start_date", "Start date", editing.start_date if editing else "", type="date", required=True) }}
+    {{ ui.field("end_date", "End date", editing.end_date if editing else "", type="date") }}
+    <div class="sm:col-span-2 flex flex-wrap items-center gap-4 pt-6">
+      {{ ui.checkbox("auto_close", "Auto-close after end date", editing.auto_close if editing else False) }}
+      {{ ui.checkbox("closable", "Closable", editing.closable if editing else True) }}
+      {{ ui.checkbox("pausable", "Pausable", editing.pausable if editing else True) }}
+      {{ ui.checkbox("renewable", "Renewable", editing.renewable if editing else True) }}
+    </div>
+    <div class="flex gap-2">{{ ui.submit("Update" if editing else "Create") }}
+      {% if editing %}<a href="/admin/plans" class="px-4 py-2 rounded-md border text-sm">Cancel</a>{% endif %}</div>
+  </form>
+{% endcall %}
+
+{% call ui.data_table(["Plan", "Period", "Price", "Min qty", "Dates", "Flags", "Status", ""], empty=not page["items"]) %}
+  {% for p in page["items"] %}
+  <tr>
+    <td class="px-4 py-3 font-medium">{{ p.name }}</td>
+    <td class="px-4 py-3">{{ p.billing_period.value.title() }}</td>
+    <td class="px-4 py-3">{{ p.price|money }}</td>
+    <td class="px-4 py-3">{{ p.min_quantity }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ p.start_date|date }} → {{ p.end_date|date }}</td>
+    <td class="px-4 py-3 text-xs text-slate-500">
+      {{ "auto-close" if p.auto_close }} {{ "closable" if p.closable }} {{ "pausable" if p.pausable }} {{ "renewable" if p.renewable }}
+    </td>
+    <td class="px-4 py-3">{{ ui.status_badge(p.status) }}</td>
+    <td class="px-4 py-3 whitespace-nowrap space-x-1">
+      <a href="/admin/plans?edit={{ p.id }}" class="px-3 py-1.5 rounded-md border text-sm">Edit</a>
+      {% if p.pausable and p.status.value == "ACTIVE" %}{{ ui.action("/admin/plans/" ~ p.id ~ "/pause", "Pause", "Pause plan " ~ p.name ~ "? Its subscriptions stop billing until renewed.") }}{% endif %}
+      {% if p.renewable %}{{ ui.action("/admin/plans/" ~ p.id ~ "/renew", "Renew", "Renew plan " ~ p.name ~ "?") }}{% endif %}
+      {% if p.closable and p.status.value != "CLOSED" %}{{ ui.action("/admin/plans/" ~ p.id ~ "/close", "Close", "Close plan " ~ p.name ~ "?", "danger") }}{% endif %}
+      {{ ui.action("/admin/plans/" ~ p.id ~ "/delete", "Delete", "Delete plan " ~ p.name ~ "?", "danger") }}
+    </td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

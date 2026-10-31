@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Brightloop{% endblock %} · Brightloop</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      main { padding: 0 !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+{% if user %}
+  {% set role = user.role.value %}
+  {% set links = {
+      "ADMIN": [("Dashboard", "/admin"), ("Products", "/admin/products"), ("Plans", "/admin/plans"),
+                ("Quotation templates", "/admin/templates"), ("Discounts", "/admin/discounts"),
+                ("Taxes", "/admin/taxes"), ("Staff", "/admin/staff"), None,
+                ("Customers", "/customers"), ("Subscriptions", "/subscriptions"), ("Invoices", "/invoices"),
+                ("Payments", "/payments"), ("Reports", "/reports")],
+      "STAFF": [("Subscriptions", "/subscriptions"), ("Invoices", "/invoices"), ("Payments", "/payments"),
+                ("Customers", "/customers"), ("Reports", "/reports")],
+      "CUSTOMER": [("My subscriptions", "/portal/subscriptions"), ("My invoices", "/portal/invoices")],
+  }[role] %}
+  <div class="min-h-screen md:flex">
+    <aside class="no-print bg-slate-900 text-slate-200 md:w-60 md:min-h-screen flex-shrink-0">
+      <div class="px-5 py-4 flex items-center justify-between md:block">
+        <a href="/" class="text-lg font-semibold text-white">Brightloop</a>
+        <p class="text-xs text-slate-400 md:mt-1">{{ role.title() }} workspace</p>
+      </div>
+      <nav class="px-3 pb-4 flex md:block gap-1 overflow-x-auto">
+        {% for link in links %}
+          {% if link is none %}
+            <div class="hidden md:block border-t border-slate-700 my-3"></div>
+          {% else %}
+            {% set active = request.url.path == link[1] or (link[1] not in ("/admin",) and request.url.path.startswith(link[1] ~ "/")) %}
+            <a href="{{ link[1] }}"
+               class="block whitespace-nowrap rounded-md px-3 py-2 text-sm {{ 'bg-slate-700 text-white' if active else 'hover:bg-slate-800' }}">{{ link[0] }}</a>
+          {% endif %}
+        {% endfor %}
+      </nav>
+      <div class="px-5 py-4 border-t border-slate-700 text-sm">
+        <p class="font-medium text-white truncate">{{ user.name }}</p>
+        <p class="text-slate-400 truncate">{{ user.email }}</p>
+        <form method="post" action="/logout" class="mt-2">
+          <button class="text-slate-300 hover:text-white underline">Log out</button>
+        </form>
+      </div>
+    </aside>
+    <main class="flex-1 p-4 md:p-8 min-w-0">
+      {% include "components/flash.html" %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+{% else %}
+  <main class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      <h1 class="text-2xl font-semibold text-center mb-6">Brightloop</h1>
+      {% include "components/flash.html" %}
+      <div class="bg-white shadow rounded-lg p-6">
+        {% block auth_content %}{% endblock %}
+      </div>
+    </div>
+  </main>
+{% endif %}
+
+<!-- Shared confirm modal: any form with data-confirm="message" asks first -->
+<div id="confirm-modal" class="no-print fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+    <h2 class="text-lg font-semibold mb-2">Please confirm</h2>
+    <p id="confirm-message" class="text-sm text-slate-600 mb-6"></p>
+    <div class="flex justify-end gap-2">
+      <button type="button" id="confirm-cancel" class="px-4 py-2 rounded-md border text-sm">Cancel</button>
+      <button type="button" id="confirm-ok" class="px-4 py-2 rounded-md bg-slate-900 text-white text-sm">Yes, continue</button>
+    </div>
+  </div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

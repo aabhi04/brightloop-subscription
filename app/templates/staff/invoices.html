@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Invoices{% endblock %}
+{% block content %}
+{% call ui.page_header("Invoices", "Generated invoices start as DRAFT with lines, taxes and discounts pre-filled") %}
+  {{ ui.action("/invoices/generate-due", "Generate due invoices", "Create invoices for every ACTIVE subscription that is due today? Safe to run more than once.", "primary") }}
+{% endcall %}
+
+{% call ui.filter_bar() %}
+  {{ ui.select("status", "Status", invoice_statuses, filters.get("status"), blank="All statuses") }}
+  {{ ui.select("customer_id", "Customer", customers, filters.get("customer_id"), blank="All customers") }}
+  {{ ui.field("date_from", "Period from", filters.get("date_from", ""), type="date") }}
+  {{ ui.field("date_to", "Period to", filters.get("date_to", ""), type="date") }}
+  {{ ui.field("q", "Number", filters.get("q", ""), placeholder="INV-0001") }}
+  <label class="inline-flex items-center gap-2 text-sm pb-2">
+    <input type="checkbox" name="overdue" value="1" {% if filters.get("overdue") == "1" %}checked{% endif %}> Overdue only
+  </label>
+{% endcall %}
+
+{% call ui.data_table(["Number", "Customer", "Period", "Due", "Total", "Paid", "Balance", "Status"], empty=not page["items"]) %}
+  {% for i in page["items"] %}
+  <tr class="hover:bg-slate-50">
+    <td class="px-4 py-3 font-medium"><a class="underline" href="/invoices/{{ i.id }}">{{ i.number }}</a></td>
+    <td class="px-4 py-3">{{ i.customer.name }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ i.billing_period_start|date }} → {{ i.billing_period_end|date }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ i.due_date|date }}</td>
+    <td class="px-4 py-3">{{ i.total|money }}</td>
+    <td class="px-4 py-3">{{ i.amount_paid|money }}</td>
+    <td class="px-4 py-3">{{ i.balance|money }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ ui.status_badge(i.status, is_overdue(i)) }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

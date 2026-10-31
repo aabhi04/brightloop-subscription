@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Error{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto mt-16 text-center">
+  <p class="text-5xl font-semibold text-slate-300">{{ status_code_value }}</p>
+  <p class="mt-4 text-lg">{{ message }}</p>
+  <a href="/" class="inline-block mt-6 px-4 py-2 rounded-md bg-slate-900 text-white text-sm">Go to my home page</a>
+</div>
+{% endblock %}
+{% block auth_content %}
+<p class="text-center text-lg">{{ message }}</p>
+<p class="text-center mt-4"><a href="/login" class="underline">Log in</a></p>
+{% endblock %}

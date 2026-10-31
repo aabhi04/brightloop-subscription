@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+{{ ui.page_header("Customers") }}
+
+{% call ui.card("New customer") %}
+  <form method="post" action="/customers" class="grid gap-4 sm:grid-cols-3">
+    {{ ui.field("name", "Name", required=True) }}
+    {{ ui.field("email", "Email", type="email", required=True) }}
+    <label class="block text-sm">
+      <span class="text-slate-600">Temporary password</span>
+      <input type="password" name="password" required data-password-rules autocomplete="new-password"
+             class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2">
+    </label>
+    <div class="sm:col-span-2">{% include "auth/password_checklist.html" %}</div>
+    <div class="flex items-end">{{ ui.submit("Create customer") }}</div>
+  </form>
+{% endcall %}
+
+{% call ui.filter_bar() %}{{ ui.field("q", "Search name or email", q) }}{% endcall %}
+
+{% call ui.data_table(["Name", "Email", "Joined", ""], empty=not page["items"]) %}
+  {% for c in page["items"] %}
+  <tr>
+    <td class="px-4 py-3 font-medium">{{ c.name }}</td>
+    <td class="px-4 py-3">{{ c.email }}</td>
+    <td class="px-4 py-3">{{ c.created_at.date()|date }}</td>
+    <td class="px-4 py-3 whitespace-nowrap space-x-2 text-sm">
+      <a class="underline" href="/subscriptions?customer_id={{ c.id }}">Subscriptions</a>
+      <a class="underline" href="/invoices?customer_id={{ c.id }}">Invoices</a>
+    </td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

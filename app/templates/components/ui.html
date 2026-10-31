@@ -1,0 +1,125 @@
+{# Shared UI macros: import with {% import "components/ui.html" as ui with context %} #}
+
+{% macro page_header(title, subtitle=None) %}
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold">{{ title }}</h1>
+      {% if subtitle %}<p class="text-sm text-slate-500 mt-1">{{ subtitle }}</p>{% endif %}
+    </div>
+    <div class="no-print flex flex-wrap gap-2">{{ caller() if caller }}</div>
+  </div>
+{% endmacro %}
+
+{% macro status_badge(status, overdue=False) %}
+  {% set s = status.value if status.value is defined else status %}
+  {% set colors = {
+      "DRAFT": "bg-slate-100 text-slate-700", "QUOTATION": "bg-indigo-100 text-indigo-700",
+      "CONFIRMED": "bg-sky-100 text-sky-700", "ACTIVE": "bg-emerald-100 text-emerald-700",
+      "CLOSED": "bg-zinc-200 text-zinc-700", "PAID": "bg-emerald-100 text-emerald-700",
+      "CANCELLED": "bg-zinc-200 text-zinc-600", "PAUSED": "bg-amber-100 text-amber-800",
+  } %}
+  <span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium {{ colors.get(s, 'bg-slate-100 text-slate-700') }}">{{ s }}</span>
+  {% if overdue %}<span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 text-red-700">OVERDUE</span>{% endif %}
+{% endmacro %}
+
+{% macro stat_card(label, value, hint=None, href=None) %}
+  <a {% if href %}href="{{ href }}"{% endif %} class="block bg-white rounded-lg shadow-sm border p-5 {{ 'hover:border-slate-400' if href }}">
+    <p class="text-sm text-slate-500">{{ label }}</p>
+    <p class="text-2xl font-semibold mt-1">{{ value }}</p>
+    {% if hint %}<p class="text-xs text-slate-400 mt-1">{{ hint }}</p>{% endif %}
+  </a>
+{% endmacro %}
+
+{% macro data_table(headers, empty=False, empty_text="Nothing to show yet.") %}
+  <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-left text-slate-500">
+        <tr>{% for h in headers %}<th class="px-4 py-3 font-medium whitespace-nowrap">{{ h }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody class="divide-y">
+        {% if empty %}
+          <tr><td colspan="{{ headers|length }}" class="px-4 py-8 text-center text-slate-400">{{ empty_text }}</td></tr>
+        {% else %}
+          {{ caller() }}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+{% endmacro %}
+
+{% macro pagination(page) %}
+  {% if page.total %}
+  <div class="no-print flex items-center justify-between mt-4 text-sm text-slate-600">
+    <p>Page {{ page.page }} of {{ page.pages }} · {{ page.total }} total</p>
+    <div class="flex gap-2">
+      {% if page.page > 1 %}
+        <a class="px-3 py-1.5 rounded-md border bg-white hover:bg-slate-50" href="{{ url_with(request, page=page.page - 1) }}">Previous</a>
+      {% endif %}
+      {% if page.page < page.pages %}
+        <a class="px-3 py-1.5 rounded-md border bg-white hover:bg-slate-50" href="{{ url_with(request, page=page.page + 1) }}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro filter_bar() %}
+  <form method="get" class="no-print bg-white rounded-lg shadow-sm border p-4 mb-4 flex flex-wrap items-end gap-3">
+    {{ caller() }}
+    <button class="px-4 py-2 rounded-md bg-slate-900 text-white text-sm">Apply</button>
+    <a href="{{ request.url.path }}" class="px-4 py-2 rounded-md border text-sm">Reset</a>
+  </form>
+{% endmacro %}
+
+{% macro field(name, label, value="", type="text", required=False, step=None, min=None, placeholder="", cls="") %}
+  <label class="block text-sm {{ cls }}">
+    <span class="text-slate-600">{{ label }}</span>
+    <input type="{{ type }}" name="{{ name }}" value="{{ value if value is not none else '' }}"
+           {% if required %}required{% endif %} {% if step %}step="{{ step }}"{% endif %}
+           {% if min is not none %}min="{{ min }}"{% endif %} placeholder="{{ placeholder }}"
+           class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400">
+  </label>
+{% endmacro %}
+
+{% macro select(name, label, options, value=None, blank=None, required=False, cls="") %}
+  {# options: list of (value, text) #}
+  <label class="block text-sm {{ cls }}">
+    <span class="text-slate-600">{{ label }}</span>
+    <select name="{{ name }}" {% if required %}required{% endif %}
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 bg-white">
+      {% if blank is not none %}<option value="">{{ blank }}</option>{% endif %}
+      {% for v, text in options %}
+        <option value="{{ v }}" {% if value is not none and v|string == value|string %}selected{% endif %}>{{ text }}</option>
+      {% endfor %}
+    </select>
+  </label>
+{% endmacro %}
+
+{% macro checkbox(name, label, checked=False) %}
+  <label class="inline-flex items-center gap-2 text-sm">
+    <input type="checkbox" name="{{ name }}" {% if checked %}checked{% endif %} class="rounded border-slate-300">
+    <span>{{ label }}</span>
+  </label>
+{% endmacro %}
+
+{% macro action(url, label, confirm=None, style="secondary") %}
+  {% set styles = {
+      "primary": "bg-slate-900 text-white hover:bg-slate-700",
+      "secondary": "border bg-white hover:bg-slate-50",
+      "danger": "border border-red-300 text-red-700 bg-white hover:bg-red-50",
+  } %}
+  <form method="post" action="{{ url }}" class="inline" {% if confirm %}data-confirm="{{ confirm }}"{% endif %}>
+    <button class="px-3 py-1.5 rounded-md text-sm {{ styles[style] }}">{{ label }}</button>
+  </form>
+{% endmacro %}
+
+{% macro submit(label="Save") %}
+  <button class="px-4 py-2 rounded-md bg-slate-900 text-white text-sm hover:bg-slate-700">{{ label }}</button>
+{% endmacro %}
+
+{% macro card(title=None) %}
+  <section class="bg-white rounded-lg shadow-sm border p-5 mb-6">
+    {% if title %}<h2 class="text-lg font-semibold mb-4">{{ title }}</h2>{% endif %}
+    {{ caller() }}
+  </section>
+{% endmacro %}

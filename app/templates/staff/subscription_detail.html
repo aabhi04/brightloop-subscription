@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}{{ sub.number }}{% endblock %}
+{% block content %}
+{% call ui.page_header(sub.number, sub.customer.name ~ " · " ~ sub.plan.name) %}
+  {% if editable %}
+    <a href="/subscriptions/{{ sub.id }}/edit" class="px-3 py-1.5 rounded-md border text-sm">Edit</a>
+    {{ ui.action("/subscriptions/" ~ sub.id ~ "/delete", "Delete", "Delete " ~ sub.number ~ "?", "danger") }}
+  {% endif %}
+{% endcall %}
+
+{% call ui.card("Lifecycle") %}
+  <ol class="flex flex-wrap items-center gap-2 text-sm mb-4">
+    {% set current = lifecycle.index(sub.status) %}
+    {% for s in lifecycle %}
+      <li class="flex items-center gap-2">
+        <span class="rounded-full px-3 py-1 {{ 'bg-slate-900 text-white' if loop.index0 == current else ('bg-emerald-100 text-emerald-800' if loop.index0 < current else 'bg-slate-100 text-slate-500') }}">{{ s.value }}</span>
+        {% if not loop.last %}<span class="text-slate-300">→</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+  <div class="flex flex-wrap gap-2">
+    {% for step in next_steps %}
+      <form method="post" action="/subscriptions/{{ sub.id }}/status" data-confirm="Move {{ sub.number }} to {{ step.value }}?">
+        <input type="hidden" name="status" value="{{ step.value }}">
+        <button class="px-4 py-2 rounded-md text-sm {{ 'border border-red-300 text-red-700' if step.value == 'CLOSED' else 'bg-slate-900 text-white' }}">
+          {{ {"QUOTATION": "Send as quotation", "CONFIRMED": "Confirm", "ACTIVE": "Activate", "CLOSED": "Close subscription"}[step.value] }}
+        </button>
+      </form>
+    {% else %}
+      <p class="text-sm text-slate-500">This subscription is closed. No further changes are possible.</p>
+    {% endfor %}
+  </div>
+{% endcall %}
+
+<div class="grid gap-6 lg:grid-cols-3">
+  {% call ui.card("Details") %}
+    <dl class="text-sm grid grid-cols-2 gap-y-2">
+      <dt class="text-slate-500">Customer</dt><dd>{{ sub.customer.name }}<br><span class="text-slate-400">{{ sub.customer.email }}</span></dd>
+      <dt class="text-slate-500">Plan</dt><dd>{{ sub.plan.name }} ({{ sub.plan.billing_period.value.lower() }})</dd>
+      <dt class="text-slate-500">Plan base price</dt><dd>{{ sub.plan.price|money }}</dd>
+      <dt class="text-slate-500">Start date</dt><dd>{{ sub.start_date|date }}</dd>
+      <dt class="text-slate-500">Quotation expiry</dt><dd>{{ sub.expiry_date|date }}</dd>
+      <dt class="text-slate-500">Payment terms</dt><dd>{{ sub.payment_terms }} days</dd>
+      <dt class="text-slate-500">Next billing</dt><dd>{{ sub.next_billing_date|date }}</dd>
+      <dt class="text-slate-500">Status</dt><dd>{{ ui.status_badge(sub.status) }}</dd>
+    </dl>
+  {% endcall %}
+  <div class="lg:col-span-2">
+    {% call ui.data_table(["Product", "Variant", "Qty", "Unit price", "Tax", "Amount"], empty=not sub.lines, empty_text="No product lines") %}
+      {% for l in sub.lines %}
+      <tr>
+        <td class="px-4 py-3">{{ l.product.name }}</td>
+        <td class="px-4 py-3">{{ l.variant.attribute ~ ": " ~ l.variant.value if l.variant else "-" }}</td>
+        <td class="px-4 py-3">{{ l.quantity }}</td>
+        <td class="px-4 py-3">{{ l.unit_price|money }}</td>
+        <td class="px-4 py-3">{{ l.tax.name if l.tax else "-" }}</td>
+        <td class="px-4 py-3">{{ l.amount|money }}</td>
+      </tr>
+      {% endfor %}
+    {% endcall %}
+  </div>
+</div>
+
+<h2 class="text-lg font-semibold mt-8 mb-3">Invoices</h2>
+{% call ui.data_table(["Number", "Period", "Due", "Total", "Paid", "Status"], empty=not invoices["items"], empty_text="No invoices yet. Invoices are generated when the subscription is ACTIVE and billing is due.") %}
+  {% for i in invoices["items"] %}
+  <tr>
+    <td class="px-4 py-3 font-medium"><a class="underline" href="/invoices/{{ i.id }}">{{ i.number }}</a></td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ i.billing_period_start|date }} → {{ i.billing_period_end|date }}</td>
+    <td class="px-4 py-3">{{ i.due_date|date }}</td>
+    <td class="px-4 py-3">{{ i.total|money }}</td>
+    <td class="px-4 py-3">{{ i.amount_paid|money }}</td>
+    <td class="px-4 py-3">{{ ui.status_badge(i.status, is_overdue(i)) }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(invoices) }}
+{% endblock %}

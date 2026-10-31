@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}My invoices{% endblock %}
+{% block content %}
+{{ ui.page_header("My invoices") }}
+
+{% call ui.filter_bar() %}
+  {{ ui.select("status", "Status", statuses, filters.get("status"), blank="All statuses") }}
+{% endcall %}
+
+{% call ui.data_table(["Invoice", "Period", "Due", "Total", "Paid", "Balance", "Status"], empty=not page["items"], empty_text="You have no invoices yet.") %}
+  {% for i in page["items"] %}
+  <tr>
+    <td class="px-4 py-3 font-medium"><a class="underline" href="/portal/invoices/{{ i.id }}">{{ i.number }}</a></td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ i.billing_period_start|date }} → {{ i.billing_period_end|date }}</td>
+    <td class="px-4 py-3">{{ i.due_date|date }}</td>
+    <td class="px-4 py-3">{{ i.total|money }}</td>
+    <td class="px-4 py-3">{{ i.amount_paid|money }}</td>
+    <td class="px-4 py-3">{{ i.balance|money }}</td>
+    <td class="px-4 py-3 whitespace-nowrap">{{ ui.status_badge(i.status, is_overdue(i)) }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

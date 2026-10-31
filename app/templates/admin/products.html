@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}Products{% endblock %}
+{% block content %}
+{{ ui.page_header("Products", "Unit price on a subscription = sales price + variant extra price") }}
+
+{% call ui.card("Edit product" if editing else "New product") %}
+  <form method="post" action="/admin/products{{ '/' ~ editing.id if editing }}" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {{ ui.field("name", "Name", editing.name if editing else "", required=True) }}
+    {{ ui.field("type", "Type", editing.type if editing else "SERVICE") }}
+    {{ ui.field("sales_price", "Sales price", editing.sales_price if editing else "", type="number", step="0.01", min=0, required=True) }}
+    {{ ui.field("cost_price", "Cost price", editing.cost_price if editing else "0", type="number", step="0.01", min=0) }}
+    {{ ui.field("notes", "Notes", editing.notes if editing else "", cls="sm:col-span-2 lg:col-span-4") }}
+    <div class="flex gap-2">{{ ui.submit("Update" if editing else "Create") }}
+      {% if editing %}<a href="/admin/products" class="px-4 py-2 rounded-md border text-sm">Cancel</a>{% endif %}</div>
+  </form>
+{% endcall %}
+
+{% call ui.filter_bar() %}
+  {{ ui.field("q", "Search", q) }}
+{% endcall %}
+
+{% call ui.data_table(["Product", "Type", "Sales price", "Cost", "Variants", ""], empty=not page["items"]) %}
+  {% for p in page["items"] %}
+  <tr class="align-top">
+    <td class="px-4 py-3 font-medium">{{ p.name }}{% if p.notes %}<p class="text-xs text-slate-400 font-normal">{{ p.notes }}</p>{% endif %}</td>
+    <td class="px-4 py-3">{{ p.type }}</td>
+    <td class="px-4 py-3">{{ p.sales_price|money }}</td>
+    <td class="px-4 py-3">{{ p.cost_price|money }}</td>
+    <td class="px-4 py-3">
+      <ul class="space-y-1">
+        {% for v in p.variants %}
+          <li class="flex items-center gap-2">
+            <span>{{ v.attribute }}: {{ v.value }} <span class="text-slate-500">+{{ v.extra_price|money }} → {{ (p.sales_price + v.extra_price)|money }}</span></span>
+            <form method="post" action="/admin/products/{{ p.id }}/variants/{{ v.id }}/delete" data-confirm="Delete variant {{ v.value }}?">
+              <button class="text-xs text-red-600 underline">remove</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="/admin/products/{{ p.id }}/variants" class="mt-2 flex flex-wrap gap-1">
+        <input name="attribute" placeholder="Attribute" required class="w-24 rounded border px-2 py-1 text-xs">
+        <input name="value" placeholder="Value" required class="w-24 rounded border px-2 py-1 text-xs">
+        <input name="extra_price" type="number" step="0.01" min="0" placeholder="Extra" class="w-20 rounded border px-2 py-1 text-xs">
+        <button class="rounded border px-2 py-1 text-xs">Add variant</button>
+      </form>
+    </td>
+    <td class="px-4 py-3 whitespace-nowrap">
+      <a href="/admin/products?edit={{ p.id }}" class="px-3 py-1.5 rounded-md border text-sm">Edit</a>
+      {{ ui.action("/admin/products/" ~ p.id ~ "/delete", "Delete", "Delete product " ~ p.name ~ "?", "danger") }}
+    </td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% from "components/line_editor.html" import line_editor %}
+{% block title %}Quotation templates{% endblock %}
+{% block content %}
+{{ ui.page_header("Quotation templates", "Staff create quotations from these; expiry = today + validity days") }}
+
+{% call ui.card("New template") %}
+  <form method="post" action="/admin/templates" class="space-y-4">
+    <div class="grid gap-4 sm:grid-cols-3">
+      {{ ui.field("name", "Name", required=True) }}
+      {{ ui.field("validity_days", "Validity (days)", 30, type="number", min=1, required=True) }}
+      <label class="block text-sm">
+        <span class="text-slate-600">Plan</span>
+        <select name="plan_id" required class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 bg-white">
+          {% for p in plans %}<option value="{{ p.id }}">{{ p.name }} ({{ p.billing_period.value.lower() }})</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    {{ line_editor(products) }}
+    {{ ui.submit("Create template") }}
+  </form>
+{% endcall %}
+
+{% call ui.data_table(["Template", "Plan", "Validity", "Lines", ""], empty=not page["items"]) %}
+  {% for t in page["items"] %}
+  <tr class="align-top">
+    <td class="px-4 py-3 font-medium">{{ t.name }}</td>
+    <td class="px-4 py-3">{{ t.plan.name }}</td>
+    <td class="px-4 py-3">{{ t.validity_days }} days</td>
+    <td class="px-4 py-3">
+      <ul>{% for l in t.lines %}<li>{{ l.quantity }} × {{ l.product.name }}{% if l.variant %} ({{ l.variant.attribute }}: {{ l.variant.value }}){% endif %}</li>{% endfor %}</ul>
+    </td>
+    <td class="px-4 py-3">{{ ui.action("/admin/templates/" ~ t.id ~ "/delete", "Delete", "Delete template " ~ t.name ~ "?", "danger") }}</td>
+  </tr>
+  {% endfor %}
+{% endcall %}
+{{ ui.pagination(page) }}
+{% endblock %}

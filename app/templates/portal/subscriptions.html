@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% import "components/ui.html" as ui with context %}
+{% block title %}My subscriptions{% endblock %}
+{% block content %}
+{{ ui.page_header("My subscriptions") }}
+
+{% call ui.filter_bar() %}
+  {{ ui.select("status", "Status", statuses, filters.get("status"), blank="All statuses") }}
+{% endcall %}
+
+{% if not page["items"] %}
+  <div class="bg-white rounded-lg border p-8 text-center text-slate-400">You have no subscriptions yet.</div>
+{% endif %}
+<div class="space-y-4">
+  {% for s in page["items"] %}
+  <section class="bg-white rounded-lg shadow-sm border p-5">
+    <div class="flex flex-wrap justify-between gap-2 mb-3">
+      <div>
+        <h2 class="font-semibold">{{ s.number }} · {{ s.plan.name }}</h2>
+        <p class="text-sm text-slate-500">Billed {{ s.plan.billing_period.value.lower() }} · started {{ s.start_date|date }}
+          {% if s.next_billing_date %} · next bill {{ s.next_billing_date|date }}{% endif %}
+          {% if s.status.value == "QUOTATION" and s.expiry_date %} · quotation valid until {{ s.expiry_date|date }}{% endif %}</p>
+      </div>
+      <div>{{ ui.status_badge(s.status) }}</div>
+    </div>
+    <ul class="text-sm divide-y">
+      {% for l in s.lines %}
+        <li class="flex justify-between py-2">
+          <span>{{ l.quantity }} × {{ l.product.name }}{% if l.variant %} ({{ l.variant.attribute }}: {{ l.variant.value }}){% endif %}</span>
+          <span>{{ l.amount|money }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{{ ui.pagination(page) }}
+{% endblock %}
