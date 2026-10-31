@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Request
+import csv
+import io
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -220,7 +222,28 @@ def invoices_page(request: Request, user: User = Depends(STAFF_PAGE), db: Sessio
         request, "staff/invoices.html", user, page=page, filters=request.query_params,
         customers=_customer_options(db), is_overdue=invoice_service.is_overdue, **STATUS_OPTIONS,
     )
-
+@router.get("/invoices/export.csv")
+def export_invoices_csv(request: Request, user: User = Depends(STAFF_PAGE), db: Session = Depends(get_db)):
+    """Download every invoice matching the current filters (not just one page)."""
+    stmt = invoice_service.invoice_list_query(**_invoice_filters(request.query_params))
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow([
+        "Number", "Customer", "Email", "Period start", "Period end", "Due date",
+        "Subtotal", "Discount", "Tax", "Total", "Paid", "Balance", "Status", "Overdue",
+    ])
+    for inv in db.scalars(stmt).unique():
+        writer.writerow([
+            inv.number, inv.customer.name, inv.customer.email,
+            inv.billing_period_start, inv.billing_period_end, inv.due_date,
+            inv.subtotal, inv.discount_total, inv.tax_total, inv.total, inv.amount_paid, inv.balance,
+            inv.status.value, "yes" if invoice_service.is_overdue(inv) else "no",
+        ])
+    return Response(
+        buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="invoices.csv"'},
+    )
 
 @router.post("/invoices/generate-due")
 def generate_due(user: User = Depends(STAFF_PAGE), db: Session = Depends(get_db)):
