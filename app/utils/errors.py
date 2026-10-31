@@ -20,3 +20,10 @@ class Forbidden(AppError):
 class Unauthorized(AppError):
     def __init__(self, message: str = "Authentication required"):
         super().__init__(message, 401)
+
+
+def get_or_404(db, model, obj_id: int, label: str | None = None):
+    obj = db.get(model, obj_id)
+    if obj is None:
+        raise NotFound(label or model.__name__)
+    return obj

@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import api_router
@@ -17,7 +18,8 @@ def _validation_message(exc: RequestValidationError) -> str:
     parts = []
     for err in exc.errors():
         field = ".".join(str(p) for p in err.get("loc", []) if p not in ("body", "query", "path"))
-        parts.append(f"{field}: {err.get('msg')}" if field else err.get("msg", "Invalid input"))
+        msg = str(err.get("msg", "Invalid input")).removeprefix("Value error, ")
+        parts.append(f"{field}: {msg}" if field else msg)
     return "; ".join(parts) or "Invalid input"
 
 
@@ -33,6 +35,13 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
         return JSONResponse({"error": _validation_message(exc)}, status_code=422)
+
+    @app.exception_handler(IntegrityError)
+    async def integrity_error(request: Request, exc: IntegrityError):
+        return JSONResponse(
+            {"error": "This change conflicts with existing data (duplicate value or record still in use)"},
+            status_code=409,
+        )
 
     @app.exception_handler(Exception)
     async def unhandled_error(request: Request, exc: Exception):
