@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -8,7 +9,9 @@ from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api import api_router
+from app.config import settings
 from app.db import engine
+from app.jobs.scheduler import start_scheduler
 from app.utils.errors import AppError
 
 logger = logging.getLogger("brightloop")
@@ -49,8 +52,16 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse({"error": "Internal server error"}, status_code=500)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = start_scheduler() if settings.enable_scheduler else None
+    yield
+    if scheduler:
+        scheduler.shutdown(wait=False)
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="Brightloop Subscription Management")
+    app = FastAPI(title="Brightloop Subscription Management", lifespan=lifespan)
     register_error_handlers(app)
     app.include_router(api_router)
 

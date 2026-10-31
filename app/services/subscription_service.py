@@ -1,7 +1,8 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, joinedload
 
 from app.models import (
     Plan,
@@ -72,6 +73,35 @@ def _check_plan_open(db: Session, plan_id: int) -> Plan:
     if plan.status == PlanStatus.CLOSED:
         raise AppError(f"Plan '{plan.name}' is closed")
     return plan
+
+
+def subscription_list_query(
+    status: SubscriptionStatus | None = None,
+    customer_id: int | None = None,
+    plan_id: int | None = None,
+    q: str | None = None,
+    start_from: date | None = None,
+    start_to: date | None = None,
+):
+    """Shared filters for the staff list and the customer portal."""
+    stmt = (
+        select(Subscription)
+        .options(joinedload(Subscription.customer), joinedload(Subscription.plan))
+        .order_by(Subscription.id.desc())
+    )
+    if status:
+        stmt = stmt.where(Subscription.status == status)
+    if customer_id:
+        stmt = stmt.where(Subscription.customer_id == customer_id)
+    if plan_id:
+        stmt = stmt.where(Subscription.plan_id == plan_id)
+    if q:
+        stmt = stmt.where(Subscription.number.ilike(f"%{q}%"))
+    if start_from:
+        stmt = stmt.where(Subscription.start_date >= start_from)
+    if start_to:
+        stmt = stmt.where(Subscription.start_date <= start_to)
+    return stmt
 
 
 def get_subscription(db: Session, subscription_id: int) -> Subscription:

@@ -1,12 +1,8 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, Response
-from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps.auth import STAFF_OR_ADMIN
-from app.models import Subscription
 from app.schemas.subscription import (
     FromTemplateIn,
     StatusIn,
@@ -15,43 +11,14 @@ from app.schemas.subscription import (
     SubscriptionSummaryOut,
 )
 from app.services import subscription_service
-from app.utils.constants import SubscriptionStatus
 from app.utils.pagination import PageParams, page_params, paginate
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"], dependencies=[Depends(STAFF_OR_ADMIN)])
 
 
-def subscription_list_query(
-    status: SubscriptionStatus | None = None,
-    customer_id: int | None = None,
-    plan_id: int | None = None,
-    q: str | None = None,
-    start_from: date | None = None,
-    start_to: date | None = None,
-):
-    stmt = (
-        select(Subscription)
-        .options(joinedload(Subscription.customer), joinedload(Subscription.plan))
-        .order_by(Subscription.id.desc())
-    )
-    if status:
-        stmt = stmt.where(Subscription.status == status)
-    if customer_id:
-        stmt = stmt.where(Subscription.customer_id == customer_id)
-    if plan_id:
-        stmt = stmt.where(Subscription.plan_id == plan_id)
-    if q:
-        stmt = stmt.where(Subscription.number.ilike(f"%{q}%"))
-    if start_from:
-        stmt = stmt.where(Subscription.start_date >= start_from)
-    if start_to:
-        stmt = stmt.where(Subscription.start_date <= start_to)
-    return stmt
-
-
 @router.get("")
 def list_subscriptions(
-    stmt=Depends(subscription_list_query),
+    stmt=Depends(subscription_service.subscription_list_query),
     params: PageParams = Depends(page_params),
     db: Session = Depends(get_db),
 ):
