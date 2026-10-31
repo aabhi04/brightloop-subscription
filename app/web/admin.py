@@ -69,7 +69,10 @@ def dashboard(request: Request, user: User = Depends(ADMIN_PAGE), db: Session = 
         db.execute(select(Subscription.status, func.count(Subscription.id)).group_by(Subscription.status)).all()
     )
     sub_counts = [(s.value, by_status.get(s, 0)) for s in SubscriptionStatus]
-    return render(request, "admin/dashboard.html", user, stats=stats, counts=counts, sub_counts=sub_counts)
+    upcoming = report_service.upcoming_billing(db)
+    return render(
+        request, "admin/dashboard.html", user, stats=stats, counts=counts, sub_counts=sub_counts, upcoming=upcoming,
+    )
 
 
 # ---------- Products & variants ----------
