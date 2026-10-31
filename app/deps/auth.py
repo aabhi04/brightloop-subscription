@@ -1,4 +1,5 @@
 from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -10,15 +11,16 @@ from app.utils.errors import Forbidden, Unauthorized
 COOKIE_NAME = "access_token"
 
 
-def _token_from_request(request: Request) -> str | None:
-    header = request.headers.get("Authorization", "")
-    if header.lower().startswith("bearer "):
-        return header[7:].strip()
-    return request.cookies.get(COOKIE_NAME)
+# auto_error=False: the cookie is an alternative; this also adds "Authorize" to /docs.
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User | None:
-    token = _token_from_request(request)
+def get_optional_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    token = credentials.credentials if credentials else request.cookies.get(COOKIE_NAME)
     if not token:
         return None
     try:

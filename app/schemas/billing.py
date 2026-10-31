@@ -71,3 +71,22 @@ class PaymentIn(BaseModel):
 
 class GenerateDueIn(BaseModel):
     on_date: date | None = None
+
+
+class ReportSummaryOut(BaseModel):
+    active_subscriptions: int
+    revenue_received: Decimal
+    outstanding_amount: Decimal
+    open_invoices: int
+    overdue_amount: Decimal
+    overdue_invoices: int
+
+
+class RevenueRowOut(BaseModel):
+    month: str
+    amount: Decimal
+    payments: int
+
+
+class OverdueInvoiceOut(InvoiceSummaryOut):
+    days_overdue: int = 0

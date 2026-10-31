@@ -9,6 +9,7 @@ from app.api import (
     portal,
     products,
     quotation_templates,
+    reports,
     subscriptions,
     taxes,
     users,
@@ -27,5 +28,6 @@ for module in (
     invoices,
     payments,
     portal,
+    reports,
 ):
     api_router.include_router(module.router)
